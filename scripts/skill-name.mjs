@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 
 /**
- * OpenClaw [Service Name] Skill — CLI for [service] operations via [API name].
+ * OpenClaw {{SKILL_NAME}} Skill — CLI for {{SERVICE}} management.
+ *
+ * Replace {{SKILL_NAME}}, {{SERVICE}}, and customize commands.
  *
  * @author Abdelkrim BOUJRAF <abdelkrim@alt-f1.be>
  * @license MIT
@@ -14,19 +16,20 @@ import { Buffer } from 'node:buffer';
 import { config } from 'dotenv';
 import { Command } from 'commander';
 
-// ── Config ──────────────────────────────────────────────────────────────────
+// ── Config (lazy via Proxy — only validated when a command runs) ────────────
 
 config(); // load .env
 
-// Lazy config — only validated when a command actually runs
 let _cfg;
 function getCfg() {
   if (!_cfg) {
     _cfg = {
-      apiKey:      env('YOUR_API_KEY'),
-      apiHost:     env('YOUR_API_HOST'),
-      maxResults:  parseInt(process.env.YOUR_MAX_RESULTS || '50', 10),
-      maxFileSize: parseInt(process.env.YOUR_MAX_FILE_SIZE || '52428800', 10), // 50 MB
+      // Required
+      host:       env('SKILL_HOST'),
+      apiToken:   env('SKILL_API_TOKEN'),
+      // Optional (with defaults)
+      maxResults: parseInt(process.env.SKILL_MAX_RESULTS || '50', 10),
+      maxFileSize: parseInt(process.env.SKILL_MAX_FILE_SIZE || '52428800', 10), // 50 MB
     };
   }
   return _cfg;
@@ -44,10 +47,7 @@ function env(key) {
 
 // ── Security helpers ────────────────────────────────────────────────────────
 
-/**
- * Prevent path traversal attacks.
- * Rejects any path containing ".." sequences.
- */
+/** Prevent path traversal attacks */
 function safePath(p) {
   if (!p) return '';
   const normalized = posix.normalize(p).replace(/\\/g, '/');
@@ -58,9 +58,7 @@ function safePath(p) {
   return normalized.replace(/^\/+/, '');
 }
 
-/**
- * Check file size against configurable limit.
- */
+/** Enforce file size limits */
 function checkFileSize(filePath) {
   const stat = statSync(filePath);
   if (stat.size > CFG.maxFileSize) {
@@ -72,46 +70,45 @@ function checkFileSize(filePath) {
 
 // ── HTTP client with rate-limit retry ───────────────────────────────────────
 
-/**
- * Build authorization header.
- * Adapt this to your service's auth method:
- * - Basic auth: Buffer.from(`${email}:${token}`).toString('base64')
- * - Bearer token: `Bearer ${token}`
- * - API key header: custom header name
- */
 function authHeader() {
-  return `Bearer ${CFG.apiKey}`;
+  // Adapt to your service's auth method:
+  // Basic auth: Buffer.from(`user:${CFG.apiToken}`).toString('base64')
+  // Bearer:     `Bearer ${CFG.apiToken}`
+  // Custom:     see service docs
+  const token = Buffer.from(`apikey:${CFG.apiToken}`).toString('base64');
+  return `Basic ${token}`;
 }
 
-/**
- * Build base URL for API requests.
- */
 function baseUrl() {
-  const host = CFG.apiHost.replace(/\/+$/, '');
+  const host = CFG.host.replace(/\/+$/, '');
   const prefix = host.startsWith('http') ? host : `https://${host}`;
-  return `${prefix}/api/v1`;
+  return `${prefix}/api/v1`; // Adjust API path
 }
 
 /**
- * Fetch with automatic rate-limit retry and exponential backoff.
+ * Make an authenticated API request with rate-limit retry.
  *
- * @param {string} path - API path (relative to baseUrl) or full URL
- * @param {object} options - fetch options (method, body, headers)
- * @param {number} retries - max retry attempts (default 3)
+ * @param {string} path     API path (e.g. /items)
+ * @param {object} options  fetch options (method, body, headers)
+ * @param {number} retries  max retry attempts on 429
  */
 async function apiFetch(path, options = {}, retries = 3) {
   const url = path.startsWith('http') ? path : `${baseUrl()}${path}`;
   const headers = {
     'Authorization': authHeader(),
     'Accept': 'application/json',
-    'Content-Type': 'application/json',
     ...options.headers,
   };
+
+  // Don't set Content-Type for FormData (browser/node sets boundary)
+  if (!(options.body instanceof FormData)) {
+    headers['Content-Type'] = headers['Content-Type'] || 'application/json';
+  }
 
   for (let attempt = 1; attempt <= retries; attempt++) {
     const resp = await fetch(url, { ...options, headers });
 
-    // Rate limited — retry with exponential backoff
+    // Rate limit handling with exponential backoff
     if (resp.status === 429) {
       const retryAfter = parseInt(resp.headers.get('retry-after') || '5', 10);
       const backoff = retryAfter * 1000 * attempt;
@@ -122,7 +119,8 @@ async function apiFetch(path, options = {}, retries = 3) {
       }
     }
 
-    if (resp.status === 204) return null; // No content (deletes)
+    // No content (e.g. DELETE success)
+    if (resp.status === 204) return null;
 
     const body = await resp.text();
     let json;
@@ -139,17 +137,61 @@ async function apiFetch(path, options = {}, retries = 3) {
   }
 }
 
-// ── Commands ────────────────────────────────────────────────────────────────
+// ── Response helpers ────────────────────────────────────────────────────────
 
-async function cmdList(options) {
-  // TODO: Implement list command
-  // const resp = await apiFetch('/items');
-  console.log('TODO: Implement list command');
+/**
+ * Extract a linked resource title from HAL+JSON responses.
+ * Useful for APIs that return { _links: { status: { href, title } } }
+ */
+function halLink(obj, rel) {
+  return obj?._links?.[rel]?.title || obj?._links?.[rel]?.href?.split('/').pop() || '?';
 }
 
-async function cmdCreate(options) {
-  // TODO: Implement create command
-  console.log('TODO: Implement create command');
+/**
+ * Extract numeric ID from a HAL link href.
+ */
+function halId(obj, rel) {
+  const href = obj?._links?.[rel]?.href;
+  if (!href) return null;
+  const match = href.match(/\/(\d+)$/);
+  return match ? match[1] : null;
+}
+
+/**
+ * Extract plain text from rich text formats (e.g. Atlassian ADF, ProseMirror).
+ * Customize for your service's rich text format.
+ */
+function extractRichText(doc) {
+  if (!doc || typeof doc === 'string') return doc || '';
+  if (!doc.content) return '';
+  const texts = [];
+  for (const node of doc.content) {
+    for (const inline of (node.content || [])) {
+      if (inline.type === 'text') texts.push(inline.text || '');
+    }
+  }
+  return texts.join('\n');
+}
+
+// ── Example CRUD commands ───────────────────────────────────────────────────
+
+async function cmdList(options) {
+  const params = new URLSearchParams({ limit: String(CFG.maxResults) });
+  if (options.status) params.set('status', options.status);
+  if (options.assignee) params.set('assignee', options.assignee);
+
+  const resp = await apiFetch(`/items?${params}`);
+  const items = resp?.items || resp?.data || [];
+
+  if (!items.length) {
+    console.log('No items found.');
+    return;
+  }
+
+  for (const item of items) {
+    console.log(`📋  #${String(item.id).padEnd(6)}  ${(item.status || '').padEnd(12)}  ${item.title || item.name}`);
+  }
+  console.log(`\n${items.length} item(s)`);
 }
 
 async function cmdRead(options) {
@@ -157,9 +199,36 @@ async function cmdRead(options) {
     console.error('ERROR: --id is required');
     process.exit(1);
   }
-  // TODO: Implement read command
-  // const item = await apiFetch(`/items/${options.id}`);
-  console.log('TODO: Implement read command');
+
+  const item = await apiFetch(`/items/${options.id}`);
+
+  console.log(`📋 #${item.id}: ${item.title || item.name}`);
+  console.log(`   Status:   ${item.status || '?'}`);
+  console.log(`   Created:  ${item.createdAt?.substring(0, 10) || '?'}`);
+  console.log(`   Updated:  ${item.updatedAt?.substring(0, 10) || '?'}`);
+
+  if (item.description) {
+    console.log(`\n📝 Description:\n${typeof item.description === 'string' ? item.description : extractRichText(item.description)}`);
+  }
+}
+
+async function cmdCreate(options) {
+  if (!options.title) {
+    console.error('ERROR: --title is required');
+    process.exit(1);
+  }
+
+  const payload = { title: options.title };
+  if (options.description) payload.description = options.description;
+  if (options.status) payload.status = options.status;
+  if (options.assignee) payload.assignee = options.assignee;
+
+  const result = await apiFetch('/items', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+
+  console.log(`✅ Created: #${result.id} — ${result.title || result.name}`);
 }
 
 async function cmdUpdate(options) {
@@ -167,8 +236,19 @@ async function cmdUpdate(options) {
     console.error('ERROR: --id is required');
     process.exit(1);
   }
-  // TODO: Implement update command
-  console.log('TODO: Implement update command');
+
+  const payload = {};
+  if (options.title) payload.title = options.title;
+  if (options.description) payload.description = options.description;
+  if (options.status) payload.status = options.status;
+  if (options.assignee) payload.assignee = options.assignee;
+
+  await apiFetch(`/items/${options.id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+
+  console.log(`✅ Updated: #${options.id}`);
 }
 
 async function cmdDelete(options) {
@@ -178,73 +258,54 @@ async function cmdDelete(options) {
   }
   if (!options.confirm) {
     console.error('ERROR: Delete requires --confirm flag for safety');
-    console.error('Usage: skill-name delete --id 123 --confirm');
+    console.error('Usage: skill-name delete --id 42 --confirm');
     process.exit(1);
   }
-  // TODO: Implement delete command
-  // await apiFetch(`/items/${options.id}`, { method: 'DELETE' });
-  console.log('TODO: Implement delete command');
+
+  await apiFetch(`/items/${options.id}`, { method: 'DELETE' });
+  console.log(`✅ Deleted: #${options.id}`);
 }
 
-async function cmdSearch(options) {
-  if (!options.query) {
-    console.error('ERROR: --query is required');
-    process.exit(1);
-  }
-  // TODO: Implement search command
-  console.log('TODO: Implement search command');
-}
-
-// ── CLI ─────────────────────────────────────────────────────────────────────
+// ── CLI definition ──────────────────────────────────────────────────────────
 
 const program = new Command();
 
 program
   .name('skill-name')
-  .description('OpenClaw [Service Name] Skill — [brief description]')
+  .description('OpenClaw {{SKILL_NAME}} Skill — {{SERVICE}} management')
   .version('1.0.0');
 
-program
-  .command('list')
-  .description('List items')
+program.command('list').description('List items')
+  .option('-s, --status <name>', 'Filter by status')
+  .option('-a, --assignee <user>', 'Filter by assignee')
   .action(wrap(cmdList));
 
-program
-  .command('create')
-  .description('Create a new item')
-  .requiredOption('-n, --name <name>', 'Item name')
-  .action(wrap(cmdCreate));
-
-program
-  .command('read')
-  .description('Read item details')
+program.command('read').description('Read item details')
   .requiredOption('--id <id>', 'Item ID')
   .action(wrap(cmdRead));
 
-program
-  .command('update')
-  .description('Update an item')
+program.command('create').description('Create an item')
+  .requiredOption('-t, --title <text>', 'Item title')
+  .option('-d, --description <text>', 'Description')
+  .option('-s, --status <name>', 'Status')
+  .option('-a, --assignee <user>', 'Assignee')
+  .action(wrap(cmdCreate));
+
+program.command('update').description('Update an item')
   .requiredOption('--id <id>', 'Item ID')
-  .option('-n, --name <name>', 'New name')
+  .option('-t, --title <text>', 'New title')
+  .option('-d, --description <text>', 'New description')
+  .option('-s, --status <name>', 'New status')
+  .option('-a, --assignee <user>', 'New assignee')
   .action(wrap(cmdUpdate));
 
-program
-  .command('delete')
-  .description('Delete an item (requires --confirm)')
+program.command('delete').description('Delete an item (requires --confirm)')
   .requiredOption('--id <id>', 'Item ID')
   .option('--confirm', 'Confirm deletion (required)')
   .action(wrap(cmdDelete));
 
-program
-  .command('search')
-  .description('Search items')
-  .requiredOption('-q, --query <text>', 'Search query')
-  .action(wrap(cmdSearch));
+// ── Error wrapper ───────────────────────────────────────────────────────────
 
-/**
- * Wrap command handler with error handling.
- * Catches API errors and prints clean error messages with status codes.
- */
 function wrap(fn) {
   return async (...args) => {
     try {

@@ -1,66 +1,80 @@
 # Publishing to ClawHub
 
-Guide for publishing OpenClaw skills to [ClawHub](https://clawhub.ai).
-
 ## Prerequisites
 
-1. Install ClawHub CLI: `npm i -g clawhub`
-2. Log in: `clawhub login` (opens browser for authorization)
+1. ClawHub account + CLI: `npm install -g clawhub`
+2. Login: `clawhub login`
 3. Verify: `clawhub whoami`
 
-## License
+## Slug Convention
 
-**All skills on ClawHub are published under MIT-0.** This is non-negotiable.
+Format: `{{service}}-by-altf1be`
 
-> ⚠️ Do NOT add a `license:` field in your `SKILL.md` frontmatter — it will conflict with ClawHub's MIT-0 requirement and cause publish errors.
+Examples:
+- `atlassian-jira-by-altf1be`
+- `openproject-by-altf1be`
+- `sharepoint-by-altf1be`
+- `x-twitter-by-altf1be`
 
 ## Publish Command
 
 ```bash
-clawhub publish ./path-to-skill \
-  --slug your-skill-by-altf1be \
-  --name "Your Skill by altf1be" \
+clawhub publish . \
+  --slug {{slug}} \
+  --name "{{Service Name}} by altf1be" \
   --version 1.0.0 \
-  --changelog "Initial release: feature list here"
+  --changelog "Initial release: CRUD items, comments, attachments"
 ```
 
-## Update an Existing Skill
+## Version Updates
 
 ```bash
-clawhub publish ./path-to-skill \
-  --slug your-skill-by-altf1be \
-  --name "Your Skill by altf1be" \
+# 1. Bump version
+npm version minor --no-git-tag-version
+
+# 2. Commit + tag
+git add -A
+git commit -m "feat: description of changes"
+git tag v1.1.0
+git push origin main --tags
+
+# 3. Publish update
+clawhub publish . \
+  --slug {{slug}} \
   --version 1.1.0 \
-  --changelog "What changed in this version"
+  --changelog "Added: feature X, Y. Fixed: bug Z"
 ```
 
-## Sync (Auto-Detect Changes)
+## Important Rules
 
-```bash
-clawhub sync --workdir ./path-to-skill
-```
+- **License:** ClawHub enforces MIT-0 for all published skills. Do NOT add `license:` to SKILL.md frontmatter.
+- **SKILL.md** is required — it's what ClawHub reads for metadata.
+- **`scripts/` dir** must contain the executable CLI file.
 
-This scans for local skills and offers to upload new or changed ones.
+## Known Issues
+
+- **CLI v0.7.0 bug:** `acceptLicenseTerms: invalid value` — tracked at [openclaw/clawhub#660](https://github.com/openclaw/clawhub/issues/660). Publishing may intermittently fail.
 
 ## After Publishing
 
-1. Verify on ClawHub: `clawhub search "your-skill"`
-2. Test install: `clawhub install your-skill-by-altf1be`
-3. Security review may take a few days — check status on ClawHub
+- Verify on ClawHub: `https://clawhub.ai/skills/{{slug}}`
+- Install test: `clawhub install {{slug}}`
+- Search test: `clawhub search {{service}}`
 
-## ALT-F1 Published Skills
+## Files Included in Publish
 
-| Slug | Version | Service |
-|------|---------|---------|
-| `atlassian-jira-by-altf1be` | 1.1.0 | Atlassian Jira Cloud |
-| `sharepoint-by-altf1be` | 1.2.0 | Microsoft SharePoint |
-| `x-twitter-by-altf1be` | 1.1.0 | X/Twitter |
-| `openclaw-skill-m365-task-manager-by-altf1be` | 0.2.0 | Microsoft 365 To Do |
+ClawHub packages these files:
+- `SKILL.md` (required)
+- `scripts/` directory
+- `package.json`
+- `README.md`
+- `.env.example`
 
-## Troubleshooting
+Files excluded (via `.gitignore`):
+- `node_modules/`
+- `.env`
+- `*.log`
 
-### `acceptLicenseTerms: invalid value`
-Known bug in ClawHub CLI v0.7.0. See [issue #660](https://github.com/openclaw/clawhub/issues/660).
+---
 
-### Skill not showing in search after publish
-Security review may take several days. Check your ClawHub dashboard or contact support on [Discord](https://discord.com/invite/clawd).
+*See also: [CHECKLIST.md](./CHECKLIST.md) for pre-publish quality gates*

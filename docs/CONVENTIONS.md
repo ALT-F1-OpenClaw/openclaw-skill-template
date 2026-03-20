@@ -1,114 +1,36 @@
 # ALT-F1 OpenClaw Skill Conventions
 
-Standards and patterns for building OpenClaw skills at ALT-F1 SRL.
+Best practices extracted from 5 production skills:
+[Jira](https://github.com/ALT-F1-OpenClaw/openclaw-skill-atlassian-jira-by-altf1be) ·
+[OpenProject](https://github.com/ALT-F1-OpenClaw/openclaw-skill-openproject) ·
+[SharePoint](https://github.com/ALT-F1-OpenClaw/openclaw-skill-sharepoint) ·
+[X/Twitter](https://github.com/ALT-F1-OpenClaw/openclaw-skill-x-twitter) ·
+[M365](https://github.com/ALT-F1-OpenClaw/openclaw-skill-m365-task-manager)
 
-## Naming
+## Architecture
 
-| What | Pattern | Example |
-|------|---------|---------|
-| Repo name | `openclaw-skill-<service>` | `openclaw-skill-atlassian-jira` |
-| ClawHub slug | `<service>-by-altf1be` | `atlassian-jira-by-altf1be` |
-| CLI binary | `<service>` | `jira` |
-| Main script | `scripts/<service>.mjs` | `scripts/jira.mjs` |
+### Single-file CLI pattern
+- One `.mjs` file in `scripts/` per skill
+- ESM (`"type": "module"` in package.json)
+- `#!/usr/bin/env node` shebang, `chmod +x`
+- 2 core dependencies: `commander` + `dotenv`
+- Node.js built-in `fetch` (no axios/got)
 
-## Project Structure
-
-Every skill MUST have:
-
-```
-├── README.md          # Standardized (see README template)
-├── SKILL.md           # OpenClaw frontmatter + command docs
-├── LICENSE            # MIT
-├── .gitignore         # node_modules, .env, *.log
-├── .env.example       # All env vars with comments
-├── package.json       # ESM, minimal deps
-└── scripts/
-    └── <service>.mjs  # Main CLI script
-```
-
-## README Standard
-
-Every README follows this exact order:
-
-1. **Title** — `# openclaw-skill-<service>`
-2. **Badges** — License, Node.js, Service (with logo), OpenClaw, ClawHub, last commit, issues, stars
-3. **Description** — one line
-4. **By-line** — `By [Abdelkrim BOUJRAF](https://www.alt-f1.be) / ALT-F1 SRL, Brussels 🇧🇪 🇲🇦`
-5. **Table of Contents**
-6. **Features**
-7. **Quick Start**
-8. **Setup**
-9. **Commands**
-10. **Security**
-11. **ClawHub**
-12. **License**
-13. **Author** — with GitHub + X links
-14. **Contributing**
-
-## Code Patterns
-
-### Lazy Config with Proxy
-
-```javascript
+### Lazy config with Proxy
+```js
 let _cfg;
 function getCfg() {
   if (!_cfg) {
-    _cfg = {
-      apiKey: env('YOUR_API_KEY'),
-      // ...
-    };
+    _cfg = { host: env('HOST'), token: env('TOKEN') };
   }
   return _cfg;
 }
 const CFG = new Proxy({}, { get: (_, prop) => getCfg()[prop] });
 ```
+**Why:** Config is only validated when a command actually runs. `--help` and `--version` work without env vars set.
 
-**Why:** Config is only validated when a command runs. `--help` works without env vars.
-
-### env() Helper
-
-```javascript
-function env(key) {
-  const v = process.env[key];
-  if (!v) {
-    console.error(`ERROR: Missing required env var ${key}. See .env.example`);
-    process.exit(1);
-  }
-  return v;
-}
-```
-
-### safePath() — Path Traversal Prevention
-
-```javascript
-function safePath(p) {
-  if (!p) return '';
-  const normalized = posix.normalize(p).replace(/\\/g, '/');
-  if (normalized.includes('..')) {
-    console.error('ERROR: Path traversal detected — ".." is not allowed');
-    process.exit(1);
-  }
-  return normalized.replace(/^\/+/, '');
-}
-```
-
-### Rate-Limit Retry with Backoff
-
-```javascript
-if (resp.status === 429) {
-  const retryAfter = parseInt(resp.headers.get('retry-after') || '5', 10);
-  const backoff = retryAfter * 1000 * attempt;
-  if (attempt < retries) {
-    console.error(`⏳ Rate limited — retrying in ${(backoff / 1000).toFixed(0)}s`);
-    await new Promise(r => setTimeout(r, backoff));
-    continue;
-  }
-}
-```
-
-### wrap() Error Handler
-
-```javascript
+### Error wrapper
+```js
 function wrap(fn) {
   return async (...args) => {
     try {
@@ -124,51 +46,129 @@ function wrap(fn) {
   };
 }
 ```
+Every command handler is wrapped: `program.command('list').action(wrap(cmdList))`
 
-## Security Rules
+## Security
 
-1. **`--confirm` for ALL deletes** — never delete without explicit flag
-2. **No secrets to stdout** — never print API keys, tokens, or passwords
-3. **`safePath()`** — prevent path traversal on any file path input
-4. **`checkFileSize()`** — enforce configurable upload limits
-5. **Rate-limit retry** — respect API rate limits with exponential backoff
-6. **Lazy validation** — `--help` must work without credentials
+### Mandatory patterns
+1. **`--confirm` for destructive operations** — every `delete` command requires `--confirm` flag
+2. **`safePath()` for file operations** — prevent `../` path traversal
+3. **`checkFileSize()` for uploads** — enforce size limits before sending
+4. **No secrets to stdout** — never print tokens, keys, or passwords
+5. **Rate-limit retry** — handle HTTP 429 with exponential backoff (3 attempts)
 
-## Auth Patterns
+### Rate-limit retry pattern
+```js
+if (resp.status === 429) {
+  const retryAfter = parseInt(resp.headers.get('retry-after') || '5', 10);
+  const backoff = retryAfter * 1000 * attempt;
+  if (attempt < retries) {
+    console.error(`⏳ Rate limited — retrying in ${(backoff/1000).toFixed(0)}s`);
+    await new Promise(r => setTimeout(r, backoff));
+    continue;
+  }
+}
+```
 
-| Method | Use Case | Example Skill |
-|--------|----------|---------------|
-| Email + API token (Basic) | Atlassian, simple APIs | [Jira](https://github.com/ALT-F1-OpenClaw/openclaw-skill-atlassian-jira) |
-| Certificate auth | Microsoft Graph (high security) | [SharePoint](https://github.com/ALT-F1-OpenClaw/openclaw-skill-sharepoint) |
-| OAuth 1.0a | X/Twitter | [X-Twitter](https://github.com/ALT-F1-OpenClaw/openclaw-skill-x-twitter) |
-| Device Code (delegated) | Microsoft 365 user context | [M365 Task Manager](https://github.com/ALT-F1-OpenClaw/openclaw-skill-m365-task-manager) |
+## Output Style
 
-## Dependencies
+### Console formatting
+- Emoji prefixes: `📋` items, `✅` success, `💬` comments, `📎` attachments, `⏱️` time, `🏷️` types
+- Padded columns with `.padEnd()` for alignment
+- Item counts at bottom: `\n${items.length} of ${total} items`
+- Monospace IDs: `#${String(id).padEnd(6)}`
+- Truncate long text: `text.substring(0, 200) + '...'`
 
-Keep dependencies **minimal**:
+### No markdown tables in output
+Platform formatting rules:
+- **Discord/WhatsApp:** Use bullet lists, not tables
+- **Discord links:** Wrap in `<>` to suppress embeds
+- **Terminal:** Padded columns are fine
 
-- `commander` — CLI framework (always)
-- `dotenv` — env vars (always)
-- Service-specific SDKs only when needed
+## File Structure
 
-## Versioning
+```
+openclaw-skill-{{name}}/
+├── scripts/
+│   └── {{name}}.mjs          # Single CLI file (all commands)
+├── docs/
+│   └── API-COVERAGE.md        # Supported vs unsupported API resources
+├── .env.example                # Required + optional vars (commented)
+├── .gitignore                  # node_modules, .env, *.log
+├── LICENSE                     # MIT
+├── package.json                # ESM, bin, deps, engines >= 18
+├── README.md                   # Badges, TOC, standard sections
+└── SKILL.md                    # Frontmatter + OpenClaw instructions
+```
 
-- Follow [semver](https://semver.org/)
-- Tag releases: `git tag v1.0.0 && git push --tags`
-- **Patch** (1.0.x) — bug fixes
-- **Minor** (1.x.0) — new features, docs changes
-- **Major** (x.0.0) — breaking changes
+## README Structure (standard order)
+
+1. **Title** — `# openclaw-skill-{{name}}`
+2. **Badges** — License, Node.js, Service, OpenClaw, ClawHub, Security, last-commit, issues, stars
+3. **Description** — one line
+4. **By-line** — `By [Abdelkrim BOUJRAF](...) / ALT-F1 SRL, Brussels 🇧🇪 🇲🇦`
+5. **Table of Contents**
+6. **Features**
+7. **Quick Start** — clone, install, configure, use (4 steps)
+8. **Setup** — prerequisites, credentials, env vars
+9. **Commands** — entity table + examples
+10. **Security** — auth, `--confirm`, rate limit, no secrets
+11. **API Coverage** — link to `docs/API-COVERAGE.md`
+12. **ClawHub** — slug + install command
+13. **License** — MIT
+14. **Author** — with 🇧🇪 🇲🇦, GitHub, X links
+15. **Contributing**
 
 ## SKILL.md Frontmatter
 
 ```yaml
 ---
-name: your-skill-by-altf1be
-description: "One-line description"
-homepage: https://github.com/ALT-F1-OpenClaw/openclaw-skill-your-service
+name: skill-name-by-altf1be
+description: "Concise description with entities, actions, auth method."
+homepage: https://github.com/ALT-F1-OpenClaw/openclaw-skill-{{name}}
 metadata:
-  {"openclaw": {"emoji": "🔧", "requires": {"env": ["VAR1", "VAR2"]}, "primaryEnv": "VAR1"}}
+  {"openclaw": {"emoji": "🔧", "requires": {"env": ["HOST", "TOKEN"]}, "optional": {"env": ["MAX_RESULTS"]}, "primaryEnv": "HOST"}}
 ---
 ```
 
-> ⚠️ **Do NOT add a `license:` field** — ClawHub enforces MIT-0 for all published skills.
+**Rules:**
+- `name` = ClawHub slug (always ends with `-by-altf1be`)
+- `description` = one sentence, include entities + auth method
+- `metadata.requires.env` = vars that MUST be set
+- `metadata.optional.env` = vars with defaults (new! — Jira/OpenProject use this)
+- `metadata.primaryEnv` = the key env var for the service
+- NO `license:` field — ClawHub enforces MIT-0
+
+## package.json
+
+```json
+{
+  "name": "openclaw-skill-{{name}}",
+  "version": "1.0.0",
+  "type": "module",
+  "bin": { "{{name}}": "./scripts/{{name}}.mjs" },
+  "dependencies": {
+    "commander": "^12.0.0",
+    "dotenv": "^16.0.0"
+  },
+  "engines": { "node": ">=18.0.0" }
+}
+```
+
+## Versioning
+
+- SemVer: `MAJOR.MINOR.PATCH`
+- Git tags: `v1.0.0`, `v1.1.0`, etc.
+- Bump with `npm version minor --no-git-tag-version`, then commit + tag + push
+
+## ClawHub Publishing
+
+```bash
+clawhub publish . --slug {{slug}} --name "{{Name}} by altf1be" --version 1.0.0
+```
+
+**Known issue:** CLI v0.7.0 has `acceptLicenseTerms` bug ([#660](https://github.com/openclaw/clawhub/issues/660)).
+
+---
+
+*Last updated: 2026-03-20*
