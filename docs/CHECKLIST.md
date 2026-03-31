@@ -27,6 +27,8 @@ Run through before every version bump or ClawHub publish.
 - [ ] `LICENSE` is MIT
 - [ ] `package.json` has `"type": "module"`, `"engines"`, `"bin"`
 - [ ] `docs/API-COVERAGE.md` lists covered vs excluded resources
+- [ ] `README.md` includes "Usage with OpenClaw" natural language examples
+- [ ] `references/` directory used for complex setup docs (if needed)
 
 ## Git
 
@@ -54,4 +56,4 @@ Run through before every version bump or ClawHub publish.
 
 ---
 
-*Based on lessons learned from 5 ALT-F1 OpenClaw skills*
+*Based on lessons learned from 7 ALT-F1 OpenClaw skills*

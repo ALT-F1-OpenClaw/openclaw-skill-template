@@ -56,6 +56,17 @@ node {baseDir}/scripts/skill-name.mjs status-list
 node {baseDir}/scripts/skill-name.mjs type-list
 ```
 
+### Search (optional)
+
+```bash
+# Search items (service-specific query language)
+node {baseDir}/scripts/skill-name.mjs search --query "status = active AND assignee = me"
+```
+
+## Extended Setup (optional)
+
+For complex auth flows (certificates, OAuth, multi-step provisioning), see [references/setup-guide.md](references/setup-guide.md).
+
 ## Security
 
 - Auth method: {{Basic / Bearer / OAuth / Certificate}} auth

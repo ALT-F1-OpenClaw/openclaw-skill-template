@@ -13,8 +13,10 @@ Format: `{{service}}-by-altf1be`
 Examples:
 - `atlassian-jira-by-altf1be`
 - `openproject-by-altf1be`
+- `hubspot-by-altf1be`
 - `sharepoint-by-altf1be`
 - `x-twitter-by-altf1be`
+- `m365-task-manager-by-altf1be`
 
 ## Publish Command
 

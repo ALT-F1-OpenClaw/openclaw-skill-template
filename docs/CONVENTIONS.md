@@ -1,11 +1,12 @@
 # ALT-F1 OpenClaw Skill Conventions
 
-Best practices extracted from 5 production skills:
+Best practices extracted from 7 production skills:
 [Jira](https://github.com/ALT-F1-OpenClaw/openclaw-skill-atlassian-jira-by-altf1be) ·
 [OpenProject](https://github.com/ALT-F1-OpenClaw/openclaw-skill-openproject) ·
+[HubSpot](https://github.com/ALT-F1-OpenClaw/openclaw-skill-hubspot-by-altf1be) ·
 [SharePoint](https://github.com/ALT-F1-OpenClaw/openclaw-skill-sharepoint) ·
 [X/Twitter](https://github.com/ALT-F1-OpenClaw/openclaw-skill-x-twitter) ·
-[M365](https://github.com/ALT-F1-OpenClaw/openclaw-skill-m365-task-manager)
+[M365 Task Manager](https://github.com/ALT-F1-OpenClaw/openclaw-skill-m365-task-manager)
 
 ## Architecture
 
@@ -89,12 +90,20 @@ Platform formatting rules:
 
 ```
 openclaw-skill-{{name}}/
+├── .github/
+│   └── ISSUE_TEMPLATE/
+│       └── bug_report.md       # Standard bug report template
 ├── scripts/
-│   └── {{name}}.mjs          # Single CLI file (all commands)
+│   └── {{name}}.mjs           # Single CLI file (all commands)
 ├── docs/
-│   └── API-COVERAGE.md        # Supported vs unsupported API resources
+│   ├── API-COVERAGE.md         # Supported vs unsupported API resources
+│   ├── CHECKLIST.md            # Pre-publish quality gates
+│   ├── CONVENTIONS.md          # ALT-F1 skill conventions
+│   └── PUBLISHING.md           # ClawHub publish guide
+├── references/                  # Optional: setup guides, API docs, examples
+│   └── setup-guide.md          # (e.g. SharePoint cert auth walkthrough)
 ├── .env.example                # Required + optional vars (commented)
-├── .gitignore                  # node_modules, .env, *.log
+├── .gitignore                  # node_modules, .env, *.log, secrets
 ├── LICENSE                     # MIT
 ├── package.json                # ESM, bin, deps, engines >= 18
 ├── README.md                   # Badges, TOC, standard sections
@@ -171,4 +180,27 @@ clawhub publish . --slug {{slug}} --name "{{Name}} by altf1be" --version 1.0.0
 
 ---
 
-*Last updated: 2026-03-20*
+## Natural Language Usage Section
+
+Production skills (SharePoint, X/Twitter) include a "Usage with OpenClaw" section in README:
+```markdown
+### Usage with OpenClaw
+
+Once installed as a skill, you can use natural language:
+
+> "List all items"
+> "Create a new item called X"
+> "Delete item #42"
+```
+This helps users understand the skill works with conversational commands, not just CLI.
+
+## References Directory (optional)
+
+For skills that require complex setup (e.g. SharePoint cert auth, OAuth flows):
+- Add `references/` directory with detailed guides
+- Link from SKILL.md/README: `See [references/setup-guide.md](references/setup-guide.md)`
+- Keeps SKILL.md concise while providing deep documentation
+
+---
+
+*Last updated: 2026-03-31 — based on 7 production ALT-F1 OpenClaw skills*

@@ -80,6 +80,18 @@ See [SKILL.md](./SKILL.md) for full command reference.
 | Items | `list`, `read`, `create`, `update`, `delete` |
 | Reference | `status-list`, `type-list` |
 
+### Usage with OpenClaw
+
+Once installed as a skill, you can use natural language:
+
+> "List all items"
+
+> "Create an item called X"
+
+> "Show me the details of item #42"
+
+> "Delete item #42"
+
 ## Security
 
 - {{Auth method}} authentication
