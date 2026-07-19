@@ -1,14 +1,15 @@
 {
   "name": "openclaw-skill-CHANGEME",
   "version": "1.0.0",
-  "description": "OpenClaw skill for {{Service}} — short description of what it does",
+  "description": "OpenClaw skill for {{Service}}  -  short description of what it does",
   "type": "module",
   "bin": {
     "skill-name": "./scripts/skill-name.mjs"
   },
   "scripts": {
     "start": "node scripts/skill-name.mjs",
-    "help": "node scripts/skill-name.mjs --help"
+    "help": "node scripts/skill-name.mjs --help",
+    "test": "node --test scripts/*.test.mjs"
   },
   "keywords": [
     "openclaw",

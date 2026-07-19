@@ -29,11 +29,11 @@ By [Abdelkrim BOUJRAF](https://www.alt-f1.be) / ALT-F1 SRL, Brussels 🇧🇪 �
 
 ## Features
 
-- **Items** — Create, read, update, delete, list with filters
-- **Reference Data** — Statuses, types, priorities, categories
-- **Attachments** — Upload, list, delete (with `--confirm`)
-- **Security** — `--confirm` required for deletes, no secrets to stdout, rate-limit retry with backoff
-- **Auth** — {{auth method}} (works with {{cloud/self-hosted/both}})
+- **Items**  -  Create, read, update, delete, list with filters
+- **Reference Data**  -  Statuses, types, priorities, categories
+- **Attachments**  -  Upload, list, delete (with `--confirm`)
+- **Security**  -  `--confirm` required for deletes, no secrets to stdout, rate-limit retry with backoff
+- **Auth**  -  {{auth method}} (works with {{cloud/self-hosted/both}})
 
 ## Quick Start
 
@@ -59,8 +59,8 @@ node scripts/skill-name.mjs create --title "My first item"
 
 1. Get credentials from {{service provider}}
 2. Copy `.env.example` to `.env` and fill in:
-   - `SKILL_HOST` — your instance URL
-   - `SKILL_API_TOKEN` — your API token
+   - `SKILL_HOST`  -  your instance URL
+   - `SKILL_API_TOKEN`  -  your API token
 3. Run `npm install`
 
 ### Prerequisites
@@ -92,11 +92,16 @@ Once installed as a skill, you can use natural language:
 
 > "Delete item #42"
 
+Production reference: [TweetClaw](https://github.com/Xquik-dev/tweetclaw) is an OpenClaw plugin and packaged skill with draft-first social account actions.
+
+Xquik is an independent third-party service. Not affiliated with X Corp. "Twitter" and "X" are trademarks of X Corp.
+
 ## Security
 
 - {{Auth method}} authentication
 - No secrets or tokens printed to stdout
 - All delete operations require explicit `--confirm` flag
+- External account actions such as posting, scheduling, replying, following, or messaging require explicit confirmation before execution
 - Path traversal prevention for file uploads (`safePath()`)
 - Built-in rate limiting with exponential backoff retry (3 attempts)
 - File size validation before upload
@@ -116,11 +121,11 @@ clawhub install {{slug}}
 
 ## License
 
-MIT — see [LICENSE](./LICENSE)
+MIT  -  see [LICENSE](./LICENSE)
 
 ## Author
 
-Abdelkrim BOUJRAF — [ALT-F1 SRL](https://www.alt-f1.be), Brussels 🇧🇪 🇲🇦
+Abdelkrim BOUJRAF  -  [ALT-F1 SRL](https://www.alt-f1.be), Brussels 🇧🇪 🇲🇦
 - GitHub: [@abdelkrim](https://github.com/abdelkrim)
 - X: [@altf1be](https://x.com/altf1be)
 

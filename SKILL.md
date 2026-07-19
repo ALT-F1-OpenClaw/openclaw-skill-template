@@ -1,6 +1,6 @@
 ---
 name: skill-name-by-altf1be
-description: "Short description of what the skill does — entities, actions, auth method."
+description: "Short description of what the skill does  -  entities, actions, auth method."
 homepage: https://github.com/ALT-F1-OpenClaw/openclaw-skill-CHANGEME
 metadata:
   {"openclaw": {"emoji": "🔧", "requires": {"env": ["SKILL_HOST", "SKILL_API_TOKEN"]}, "optional": {"env": ["SKILL_MAX_RESULTS", "SKILL_MAX_FILE_SIZE"]}, "primaryEnv": "SKILL_HOST"}}
@@ -72,6 +72,7 @@ For complex auth flows (certificates, OAuth, multi-step provisioning), see [refe
 - Auth method: {{Basic / Bearer / OAuth / Certificate}} auth
 - No secrets or tokens printed to stdout
 - All delete operations require explicit `--confirm` flag
+- External account actions such as posting, scheduling, replying, following, or messaging require explicit confirmation before execution
 - Path traversal prevention for file uploads (`safePath()`)
 - Built-in rate limiting with exponential backoff retry (3 attempts)
 - File size validation before upload
@@ -79,11 +80,11 @@ For complex auth flows (certificates, OAuth, multi-step provisioning), see [refe
 
 ## Dependencies
 
-- `commander` — CLI framework
-- `dotenv` — environment variable loading
+- `commander`  -  CLI framework
+- `dotenv`  -  environment variable loading
 - Node.js built-in `fetch` (requires Node >= 18)
 
 ## Author
 
-Abdelkrim BOUJRAF — [ALT-F1 SRL](https://www.alt-f1.be), Brussels 🇧🇪 🇲🇦
+Abdelkrim BOUJRAF  -  [ALT-F1 SRL](https://www.alt-f1.be), Brussels 🇧🇪 🇲🇦
 X: [@altf1be](https://x.com/altf1be)
