@@ -8,11 +8,13 @@ Run through before every version bump or ClawHub publish.
 - [ ] `node scripts/skill-name.mjs --version` shows correct version
 - [ ] All CRUD commands tested against real API
 - [ ] `--confirm` required for all delete commands
+- [ ] External account actions are draft-first and require explicit confirmation
 - [ ] `safePath()` used on all file path inputs
+- [ ] Path tests reject POSIX, Windows, and traversal inputs without rejecting safe dotted filenames
 - [ ] `checkFileSize()` used before file uploads
 - [ ] No secrets/tokens in stdout (test with `2>&1 | grep -i token`)
 - [ ] Rate-limit retry (429) implemented with exponential backoff
-- [ ] Lazy config — `--help` works without `.env`
+- [ ] Lazy config  -  `--help` works without `.env`
 - [ ] Error messages include status code: `ERROR (404): Not found`
 
 ## Files
@@ -51,6 +53,7 @@ Run through before every version bump or ClawHub publish.
 - [ ] No hardcoded credentials anywhere
 - [ ] `.env.example` uses placeholder values only
 - [ ] No real URLs/emails in example files
+- [ ] Social posting, scheduling, reply, follow, and message actions have approval gates
 - [ ] Path traversal prevented (`safePath()`)
 - [ ] File size limits enforced (`checkFileSize()`)
 

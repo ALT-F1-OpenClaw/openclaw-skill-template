@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * OpenClaw {{SKILL_NAME}} Skill — CLI for {{SERVICE}} management.
+ * OpenClaw {{SKILL_NAME}} Skill  -  CLI for {{SERVICE}} management.
  *
  * Replace {{SKILL_NAME}}, {{SERVICE}}, and customize commands.
  *
@@ -11,12 +11,13 @@
  */
 
 import { readFileSync, statSync } from 'node:fs';
-import { basename, resolve, posix } from 'node:path';
+import { basename, resolve } from 'node:path';
 import { Buffer } from 'node:buffer';
 import { config } from 'dotenv';
 import { Command } from 'commander';
+import { normalizeRelativePath } from './path-safety.mjs';
 
-// ── Config (lazy via Proxy — only validated when a command runs) ────────────
+// ── Config (lazy via Proxy  -  only validated when a command runs) ────────────
 
 config(); // load .env
 
@@ -49,13 +50,12 @@ function env(key) {
 
 /** Prevent path traversal attacks */
 function safePath(p) {
-  if (!p) return '';
-  const normalized = posix.normalize(p).replace(/\\/g, '/');
-  if (normalized.includes('..')) {
-    console.error('ERROR: Path traversal detected — ".." is not allowed');
+  try {
+    return normalizeRelativePath(p);
+  } catch (error) {
+    console.error(`ERROR: ${error.message}`);
     process.exit(1);
   }
-  return normalized.replace(/^\/+/, '');
 }
 
 /** Enforce file size limits */
@@ -113,7 +113,7 @@ async function apiFetch(path, options = {}, retries = 3) {
       const retryAfter = parseInt(resp.headers.get('retry-after') || '5', 10);
       const backoff = retryAfter * 1000 * attempt;
       if (attempt < retries) {
-        console.error(`⏳ Rate limited — retrying in ${(backoff / 1000).toFixed(0)}s (attempt ${attempt}/${retries})`);
+        console.error(`⏳ Rate limited  -  retrying in ${(backoff / 1000).toFixed(0)}s (attempt ${attempt}/${retries})`);
         await new Promise(r => setTimeout(r, backoff));
         continue;
       }
@@ -228,7 +228,7 @@ async function cmdCreate(options) {
     body: JSON.stringify(payload),
   });
 
-  console.log(`✅ Created: #${result.id} — ${result.title || result.name}`);
+  console.log(`✅ Created: #${result.id}  -  ${result.title || result.name}`);
 }
 
 async function cmdUpdate(options) {
@@ -272,7 +272,7 @@ const program = new Command();
 
 program
   .name('skill-name')
-  .description('OpenClaw {{SKILL_NAME}} Skill — {{SERVICE}} management')
+  .description('OpenClaw {{SKILL_NAME}} Skill  -  {{SERVICE}} management')
   .version('1.0.0');
 
 program.command('list').description('List items')

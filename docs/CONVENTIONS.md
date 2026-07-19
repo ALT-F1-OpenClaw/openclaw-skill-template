@@ -52,11 +52,12 @@ Every command handler is wrapped: `program.command('list').action(wrap(cmdList))
 ## Security
 
 ### Mandatory patterns
-1. **`--confirm` for destructive operations** — every `delete` command requires `--confirm` flag
-2. **`safePath()` for file operations** — prevent `../` path traversal
-3. **`checkFileSize()` for uploads** — enforce size limits before sending
-4. **No secrets to stdout** — never print tokens, keys, or passwords
-5. **Rate-limit retry** — handle HTTP 429 with exponential backoff (3 attempts)
+1. **`--confirm` for destructive operations**  -  every `delete` command requires `--confirm` flag
+2. **`safePath()` for file operations**  -  prevent `../` path traversal
+3. **`checkFileSize()` for uploads**  -  enforce size limits before sending
+4. **No secrets to stdout**  -  never print tokens, keys, or passwords
+5. **Rate-limit retry**  -  handle HTTP 429 with exponential backoff (3 attempts)
+6. **Approval gates for external account actions**: draft first and require explicit confirmation before posting, scheduling, replying, following, or messaging
 
 ### Rate-limit retry pattern
 ```js
@@ -64,7 +65,7 @@ if (resp.status === 429) {
   const retryAfter = parseInt(resp.headers.get('retry-after') || '5', 10);
   const backoff = retryAfter * 1000 * attempt;
   if (attempt < retries) {
-    console.error(`⏳ Rate limited — retrying in ${(backoff/1000).toFixed(0)}s`);
+    console.error(`⏳ Rate limited  -  retrying in ${(backoff/1000).toFixed(0)}s`);
     await new Promise(r => setTimeout(r, backoff));
     continue;
   }
@@ -112,20 +113,20 @@ openclaw-skill-{{name}}/
 
 ## README Structure (standard order)
 
-1. **Title** — `# openclaw-skill-{{name}}`
-2. **Badges** — License, Node.js, Service, OpenClaw, ClawHub, Security, last-commit, issues, stars
-3. **Description** — one line
-4. **By-line** — `By [Abdelkrim BOUJRAF](...) / ALT-F1 SRL, Brussels 🇧🇪 🇲🇦`
+1. **Title**  -  `# openclaw-skill-{{name}}`
+2. **Badges**  -  License, Node.js, Service, OpenClaw, ClawHub, Security, last-commit, issues, stars
+3. **Description**  -  one line
+4. **By-line**  -  `By [Abdelkrim BOUJRAF](...) / ALT-F1 SRL, Brussels 🇧🇪 🇲🇦`
 5. **Table of Contents**
 6. **Features**
-7. **Quick Start** — clone, install, configure, use (4 steps)
-8. **Setup** — prerequisites, credentials, env vars
-9. **Commands** — entity table + examples
-10. **Security** — auth, `--confirm`, rate limit, no secrets
-11. **API Coverage** — link to `docs/API-COVERAGE.md`
-12. **ClawHub** — slug + install command
-13. **License** — MIT
-14. **Author** — with 🇧🇪 🇲🇦, GitHub, X links
+7. **Quick Start**  -  clone, install, configure, use (4 steps)
+8. **Setup**  -  prerequisites, credentials, env vars
+9. **Commands**  -  entity table + examples
+10. **Security**  -  auth, `--confirm`, rate limit, no secrets
+11. **API Coverage**  -  link to `docs/API-COVERAGE.md`
+12. **ClawHub**  -  slug + install command
+13. **License**  -  MIT
+14. **Author**  -  with 🇧🇪 🇲🇦, GitHub, X links
 15. **Contributing**
 
 ## SKILL.md Frontmatter
@@ -144,9 +145,9 @@ metadata:
 - `name` = ClawHub slug (always ends with `-by-altf1be`)
 - `description` = one sentence, include entities + auth method
 - `metadata.requires.env` = vars that MUST be set
-- `metadata.optional.env` = vars with defaults (new! — Jira/OpenProject use this)
+- `metadata.optional.env` = vars with defaults (new!  -  Jira/OpenProject use this)
 - `metadata.primaryEnv` = the key env var for the service
-- NO `license:` field — ClawHub enforces MIT-0
+- NO `license:` field  -  ClawHub enforces MIT-0
 
 ## package.json
 
@@ -203,4 +204,4 @@ For skills that require complex setup (e.g. SharePoint cert auth, OAuth flows):
 
 ---
 
-*Last updated: 2026-03-31 — based on 7 production ALT-F1 OpenClaw skills*
+*Last updated: 2026-03-31  -  based on 7 production ALT-F1 OpenClaw skills*
